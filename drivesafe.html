@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveSafe AI</title>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0F0F28; /* Dark blue background */
+            color: white; /* Default text color */
+            margin: 0;
+            padding: 20px;
+            display: flex; /* Used by language selector overlay */
+            justify-content: center; /* Center content horizontally */
+            align-items: flex-start; /* Align dashboard to top */
+            min-height: 100vh;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 400px; /* Constrain width for mobile-like view */
+        }
+
+        header h1 {
+            color: #00FFFF; /* Cyan */
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px; /* Slightly larger title */
+        }
+
+        .panel {
+            background-color: #1E1E3C; /* Slightly lighter blue */
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+        }
+
+        .panel h2 {
+            color: #00FFFF; /* Cyan */
+            margin-top: 0;
+            margin-bottom: 15px; /* Space below panel titles */
+            font-size: 16px;
+            text-align: center; /* Center panel titles */
+            border-bottom: 1px solid #2D2D5A; /* Separator line */
+            padding-bottom: 8px; /* Space above line */
+        }
+
+        /* Camera Feed */
+        .camera-container {
+            background-color: #2D2D5A; /* Darker blue for camera background */
+            border-radius: 8px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #3a3a6b; /* Subtle border */
+        }
+
+        #cameraFeed {
+            width: 100%;
+            display: block; /* Remove extra space below video */
+            aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+            object-fit: cover; /* Cover the container */
+        }
+
+        #drowsinessWarning {
+            position: absolute;
+            top: 10px;
+            left: 10px; /* Position slightly inset */
+            right: 10px;
+            background-color: rgba(255, 0, 0, 0.8); /* Red warning background */
+            color: white;
+            padding: 8px; /* More padding */
+            border-radius: 5px; /* Rounded corners */
+            text-align: center;
+            font-weight: bold;
+            display: none; /* Initially hidden */
+            font-size: 14px;
+            z-index: 10; /* Ensure it's above video */
+        }
+
+        /* Metrics Display */
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin-top: 15px; /* Space above metrics */
+        }
+
+        .metric h3 { /* Label for metric (e.g., HEART RATE) */
+            font-size: 11px; /* Smaller label */
+            margin-bottom: 5px;
+            color: #aaa; /* Greyish label color */
+            text-transform: uppercase; /* Uppercase labels */
+            letter-spacing: 0.5px;
+        }
+
+        .metric h4 { /* Label for metric inside alert popup */
+            font-size: 10px;
+            margin-bottom: 3px;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .metric p { /* Value (e.g., 76) */
+            font-size: 26px; /* Larger value */
+            margin: 0 0 2px 0; /* Adjust spacing */
+            font-weight: bold;
+            color: #00FFFF; /* Cyan value */
+        }
+
+        .metric span { /* Unit (e.g., bpm) */
+            font-size: 12px;
+            opacity: 0.8;
+            color: #ccc; /* Lighter unit color */
+        }
+
+        /* Status Display */
+        .status {
+            text-align: center;
+            margin: 25px 0 15px 0; /* More vertical margin */
+            font-size: 13px; /* Slightly larger status text */
+        }
+        .status span#statusText { /* The actual status text part */
+            font-weight: bold;
+            padding: 3px 8px; /* Add padding for background effect */
+            border-radius: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-weight: bold;
+        }
+        .btn:hover {
+            transform: scale(1.03); /* Slight grow on hover */
+        }
+
+        .simulate-btn {
+            background-color: #00FFFF; /* Cyan */
+            color: #0F0F28; /* Dark text */
+            display: block; /* Make it full width */
+            width: 100%;
+            margin-top: 10px; /* Space above button */
+        }
+        .simulate-btn:hover {
+            background-color: #33FFFF; /* Lighter cyan */
+        }
+
+        /* Alert Popup */
+        .alert-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 15, 40, 0.85); /* Darker overlay */
+            display: none; /* Initially hidden */
+            justify-content: center;
+            align-items: center;
+            z-index: 100; /* High z-index */
+            padding: 15px; /* Padding for smaller screens */
+        }
+
+        .alert-content {
+            background-color: #1E1E3C;
+            padding: 25px; /* More padding */
+            border-radius: 10px;
+            width: 90%;
+            max-width: 320px; /* Slightly wider */
+            border: 1px solid #00FFFF; /* Cyan border */
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4); /* Cyan glow */
+        }
+
+        .alert-header h1 { /* DriveSafe AI in alert */
+            color: #00FFFF;
+            font-size: 18px; /* Larger */
+            margin: 0 0 5px 0; /* Space below */
+            text-align: center;
+        }
+
+        .alert-header h2 { /* ALERT text */
+            color: #FF4136; /* Brighter red */
+            font-size: 22px; /* Larger */
+            font-weight: bold;
+            margin: 5px 0 20px 0; /* More space below */
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .alert-body h3 { /* Health Issue Detected text */
+            font-size: 15px; /* Larger */
+            margin-bottom: 8px;
+            text-align: center;
+            color: white; /* Ensure white text */
+        }
+
+        .alert-body p#alertMessage { /* The specific reason */
+            font-size: 13px; /* Larger reason text */
+            margin-bottom: 20px; /* More space below */
+            text-align: center;
+            color: #eee; /* Lighter grey */
+            line-height: 1.4;
+        }
+
+        .alert-body .metrics { /* Metrics inside alert */
+            margin-bottom: 20px;
+        }
+
+        .alert-actions {
+            display: flex;
+            justify-content: space-between; /* Space out buttons */
+            gap: 15px; /* More gap */
+            margin-top: 25px; /* More space above actions */
+        }
+
+        .details-btn {
+            background-color: #00FFFF; /* Cyan */
+            color: #0F0F28; /* Dark text */
+            flex-grow: 1; /* Allow buttons to grow */
+        }
+        .details-btn:hover {
+            background-color: #33FFFF;
+        }
+
+        .cancel-btn {
+            background-color: #FF4136; /* Brighter red */
+            color: white;
+            flex-grow: 1;
+        }
+        .cancel-btn:hover {
+            background-color: #FF6347; /* Lighter red */
+        }
+
+        /* AI Assistant Panel */
+        .ai-assistance {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1E1E3C;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .ai-assistance h2 {
+            color: #00FFFF;
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 15px; /* More space */
+            text-align: center;
+            border-bottom: 1px solid #2D2D5A;
+            padding-bottom: 8px;
+        }
+
+        #aiResponse {
+            margin-top: 10px;
+            margin-bottom: 15px; /* Space below response */
+            font-style: italic;
+            color: #ddd;
+            min-height: 3em; /* Ensure space for multi-line responses */
+            background-color: #2D2D5A; /* Background for response area */
+            padding: 10px;
+            border-radius: 5px;
+            line-height: 1.5; /* Better readability */
+            overflow-wrap: break-word; /* Wrap long words */
+        }
+
+        #aiInput {
+            flex-grow: 1; /* Take available space */
+            padding: 10px; /* More padding */
+            border: 1px solid #333;
+            border-radius: 5px;
+            background-color: #2D2D5A;
+            color: white;
+            font-size: 13px; /* Slightly larger input text */
+        }
+        #aiInput:focus {
+            outline: none;
+            border-color: #00FFFF; /* Highlight on focus */
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+
+        #aiSendBtn {
+            padding: 10px 15px; /* Adjusted padding */
+            border: none;
+            border-radius: 5px;
+            background-color: #00FFFF; /* Cyan */
+            color: #0F0F28; /* Dark text */
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 8px; /* More space */
+            font-weight: bold;
+        }
+        #aiSendBtn:hover {
+            background-color: #33FFFF;
+        }
+        #aiSendBtn:disabled { /* Style for disabled button */
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        .ai-input-container {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            align-items: center; /* Align items vertically */
+        }
+
+        /* Styles for Language Selector */
+        #languageSelectorOverlay {
+            position: fixed; /* Cover the whole screen */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 15, 40, 0.9); /* Dark overlay */
+            display: flex; /* Center the box */
+            justify-content: center;
+            align-items: center;
+            z-index: 200; /* Ensure it's on top */
+            opacity: 1;
+            transition: opacity 0.5s ease-out; /* For fade-out effect */
+        }
+
+        #languageSelectorBox {
+            background-color: #1E1E3C;
+            padding: 30px 40px;
+            border-radius: 15px;
+            text-align: center;
+            color: #00FFFF; /* Cyan text */
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        #languageSelectorBox h2 {
+            margin-top: 0; /* Remove default margin */
+            margin-bottom: 25px;
+            font-size: 20px;
+            color: white;
+            border-bottom: none; /* No border for this h2 */
+            padding-bottom: 0;
+        }
+
+        .lang-options {
+            display: flex; /* Arrange buttons side-by-side */
+            justify-content: center;
+            gap: 20px; /* Space between buttons */
+        }
+
+        .lang-btn {
+            background-color: #00FFFF; /* Cyan background */
+            color: #0F0F28; /* Dark text */
+            border: none;
+            border-radius: 8px;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column; /* Stack icon and text */
+            align-items: center;
+            min-width: 100px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .lang-btn:hover {
+            background-color: #33FFFF; /* Lighter cyan on hover */
+            transform: scale(1.05); /* Slight zoom effect */
+        }
+
+        .lang-icon {
+            font-size: 24px; /* Larger text acting as icon */
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .lang-text {
+            font-size: 14px;
+        }
+
+        /* Style for hiding the overlay */
+        #languageSelectorOverlay.hidden {
+            opacity: 0;
+            pointer-events: none; /* Don't intercept clicks when hidden */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="languageSelectorOverlay">
+        <div id="languageSelectorBox">
+            <h2>Choose Language / भाषा चुनें</h2>
+            <div class="lang-options">
+                <button id="selectEnglishBtn" class="lang-btn" title="English">
+                    <span class="lang-icon">EN</span> <span class="lang-text">English</span>
+                </button>
+                <button id="selectHindiBtn" class="lang-btn" title="हिन्दी">
+                    <span class="lang-icon">HI</span> <span class="lang-text">हिन्दी</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard" id="mainDashboard" style="display: none;">
+        <header>
+            <h1 id="mainTitle">DriveSafe AI</h1>
+        </header>
+
+        <div class="panel monitoring-panel">
+            <h2 id="monitoringTitle">MONITORING</h2>
+
+            <div class="camera-container">
+                <video id="cameraFeed" autoplay playsinline muted></video>
+                <div id="drowsinessWarning">DROWSINESS DETECTED!</div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <h3 id="heartRateLabel">HEART RATE</h3>
+                    <p id="heartRate">--</p>
+                    <span>bpm</span>
+                </div>
+                <div class="metric">
+                    <h3 id="temperatureLabel">TEMPERATURE</h3>
+                    <p id="temperature">--</p>
+                    <span>°F</span>
+                </div>
+            </div>
+            <div class="status" id="statusContainer">
+                <span id="statusLabel">Status:</span> <span id="statusText">Initializing...</span>
+            </div>
+            <button id="simulateBtn" class="btn simulate-btn">Simulate Emergency</button>
+        </div>
+
+        <div class="alert-popup" id="alertPopup">
+            <div class="alert-content">
+                <div class="alert-header">
+                    <h1 id="alertPopupTitle">DriveSafe AI</h1>
+                    <h2 id="alertPopupHeader">ALERT</h2>
+                </div>
+                <div class="alert-body">
+                    <h3 id="alertBodyTitle">Health Issue Detected</h3>
+                    <p id="alertMessage">A health issue has been detected.</p>
+                    <div class="metrics">
+                        <div class="metric">
+                            <h4 id="alertHeartRateLabel">HEART RATE</h4>
+                            <p id="alertHeartRate">--</p>
+                            <span>bpm</span>
+                        </div>
+                        <div class="metric">
+                            <h4 id="alertTemperatureLabel">TEMPERATURE</h4>
+                            <p id="alertTemperature">--</p>
+                            <span>°F</span>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button id="detailsBtn" class="btn details-btn">SHOW DETAILS</button>
+                        <button id="cancelBtn" class="btn cancel-btn">CANCEL</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel ai-assistance">
+            <h2 id="aiAssistantTitle">AI Assistant</h2>
+            <div id="aiResponse">Initializing...</div>
+            <div class="ai-input-container">
+                <input type="text" id="aiInput" placeholder="Ask me anything...">
+                <button id="aiSendBtn" class="btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration & State ---
+        let selectedLanguage = 'en'; // Default language, will be set by button click
+        let heartRate = 76;          // Initial simulated heart rate
+        let temperature = 98.6;      // Initial simulated temperature
+        let alertActive = false;     // Flag for whether an alert is currently displayed
+        let isDrowsy = false;        // Flag for drowsiness state
+        const speechSynthesis = window.speechSynthesis; // Browser's speech synthesis API
+        let faceApiModelLoaded = false; // Track if face-api.js models loaded successfully
+
+        // --- DOM Elements ---
+        // Declared globally, assigned in setupLanguageSelection or assignDashboardDOMElements
+        let languageSelectorOverlay, mainDashboard, selectEnglishBtn, selectHindiBtn;
+        let heartRateDisplay, temperatureDisplay, alertHeartRateDisplay, alertTemperatureDisplay,
+            alertMessage, statusContainer, statusLabel, statusText, simulateBtn, alertPopup,
+            detailsBtn, cancelBtn, cameraFeed, drowsinessWarning, aiResponseDiv,
+            aiInput, aiSendBtn, mainTitle, monitoringTitle, heartRateLabel, temperatureLabel,
+            alertPopupTitle, alertPopupHeader, alertBodyTitle, alertHeartRateLabel,
+            alertTemperatureLabel, aiAssistantTitle;
+
+        // --- Language Resources ---
+        // Holds all display text in English and Hindi
+        const uiText = {
+            en: {
+                mainTitle: "DriveSafe AI",
+                monitoringTitle: "MONITORING",
+                heartRateLabel: "HEART RATE",
+                temperatureLabel: "TEMPERATURE",
+                statusLabel: "Status:",
+                statusNormal: "Normal",
+                statusAlert: "ALERT",
+                statusInitializing: "Initializing...",
+                simulateButton: "Simulate Emergency",
+                alertPopupTitle: "DriveSafe AI",
+                alertPopupHeader: "ALERT",
+                alertBodyTitle: "Health Issue Detected",
+                alertHeartRateLabel: "HEART RATE",
+                alertTemperatureLabel: "TEMPERATURE",
+                alertDetailsButton: "SHOW DETAILS",
+                alertCancelButton: "CANCEL",
+                aiAssistantTitle: "AI Assistant",
+                aiPlaceholder: "Ask me anything...",
+                aiSendButton: "Send",
+                drowsinessWarning: "DROWSINESS DETECTED!",
+                initializingAI: "Initializing AI Assistant...",
+                askAnything: "How can I assist you today?",
+                processing: (query) => `You asked: "${query}". Processing...`,
+                fallbackResponse: "I'm sorry, I don't have information on that. How else can I assist you?",
+                cameraError: "Camera access denied or error. Using simulated data only.",
+                faceApiError: "Face detection model failed to load. Drowsiness detection may be limited.",
+                alertBaseReason: "A health issue has been detected in the driver.",
+                alertReasonDrowsiness: "Drowsiness detected",
+                alertReasonAnomaly: "Health anomaly detected",
+                alertReasonSimulated: "Simulated emergency reported by user.",
+                alertReasonCall: "Emergency call requested by user.",
+                alertCancelled: "Alert cancelled. System back to normal.",
+                simulatingEmergency: "Simulating emergency alert. Please remain calm.",
+                simulatingCall: "Simulating an emergency call. Please confirm if you need immediate assistance.",
+                initialGreeting: "DriveSafe AI system activated. How can I assist you?",
+                showDetailsTitle: "Detailed Health Report",
+                showDetailsIssues: "Possible Issues:",
+                showDetailsDrowsy: "Drowsiness detected",
+                showDetailsVitals: "Elevated vital signs",
+                showDetailsActions: "Recommended Actions:",
+                showDetailsActionBreak: "Take a break",
+                showDetailsActionHydrate: "Check hydration",
+                showDetailsActionPullover: "Pull over if feeling unwell",
+                showDetailsHumanComm: "Human Communication:",
+                showDetailsCommEn: "English: Please take a break and ensure you are hydrated.",
+                showDetailsCommHi: "Hindi: कृपया विश्राम करें और सुनिश्चित करें कि आप हाइड्रेटेड हैं।",
+            },
+            hi: {
+                mainTitle: "ड्राइवसेफ एआई",
+                monitoringTitle: "निगरानी",
+                heartRateLabel: "हृदय गति",
+                temperatureLabel: "तापमान",
+                statusLabel: "स्थिति:",
+                statusNormal: "सामान्य",
+                statusAlert: "चेतावनी",
+                statusInitializing: "शुरू हो रहा है...",
+                simulateButton: "आपातकाल का अनुकरण करें",
+                alertPopupTitle: "ड्राइवसेफ एआई",
+                alertPopupHeader: "चेतावनी",
+                alertBodyTitle: "स्वास्थ्य समस्या का पता चला",
+                alertHeartRateLabel: "हृदय गति",
+                alertTemperatureLabel: "तापमान",
+                alertDetailsButton: "विवरण दिखाएं",
+                alertCancelButton: "रद्द करें",
+                aiAssistantTitle: "एआई सहायक",
+                aiPlaceholder: "मुझसे कुछ भी पूछें...",
+                aiSendButton: "भेजें",
+                drowsinessWarning: "उनींदापन का पता चला!",
+                initializingAI: "एआई सहायक शुरू हो रहा है...",
+                askAnything: "मैं आज आपकी कैसे सहायता कर सकता हूँ?",
+                processing: (query) => `आपने पूछा: "${query}"। प्रक्रिया चल रही है...`,
+                fallbackResponse: "मुझे क्षमा करें, मेरे पास उस पर जानकारी नहीं है। मैं आपकी और कैसे सहायता कर सकता हूँ?",
+                cameraError: "कैमरा एक्सेस अस्वीकृत या त्रुटि। केवल सिम्युलेटेड डेटा का उपयोग किया जा रहा है।",
+                faceApiError: "चेहरा पहचान मॉडल लोड करने में विफल। उनींदापन का पता लगाना सीमित हो सकता है।",
+                alertBaseReason: "ड्राइवर में स्वास्थ्य समस्या का पता चला है।",
+                alertReasonDrowsiness: "उनींदापन का पता चला",
+                alertReasonAnomaly: "स्वास्थ्य विसंगति का पता चला",
+                alertReasonSimulated: "उपयोगकर्ता द्वारा सिम्युलेटेड आपातकाल की सूचना दी गई।",
+                alertReasonCall: "उपयोगकर्ता द्वारा आपातकालीन कॉल का अनुरोध किया गया।",
+                alertCancelled: "चेतावनी रद्द। सिस्टम सामान्य हो गया है।",
+                simulatingEmergency: "आपातकालीन चेतावनी का अनुकरण किया जा रहा है। कृपया शांत रहें।",
+                simulatingCall: "एक आपातकालीन कॉल का अनुकरण किया जा रहा है। कृपया पुष्टि करें कि क्या आपको तत्काल सहायता की आवश्यकता है।",
+                initialGreeting: "ड्राइवसेफ एआई सिस्टम सक्रिय। मैं आपकी कैसे सहायता कर सकता हूँ?",
+                showDetailsTitle: "विस्तृत स्वास्थ्य रिपोर्ट",
+                showDetailsIssues: "संभावित मुद्दे:",
+                showDetailsDrowsy: "उनींदापन का पता चला",
+                showDetailsVitals: "महत्वपूर्ण संकेत बढ़े हुए हैं",
+                showDetailsActions: "अनुशंसित कार्रवाइयाँ:",
+                showDetailsActionBreak: "ब्रेक लें",
+                showDetailsActionHydrate: "हाइड्रेशन की जाँच करें",
+                showDetailsActionPullover: "अस्वस्थ महसूस होने पर गाड़ी किनारे लगाएँ",
+                showDetailsHumanComm: "मानव संचार:",
+                showDetailsCommEn: "English: Please take a break and ensure you are hydrated.",
+                showDetailsCommHi: "Hindi: कृपया विश्राम करें और सुनिश्चित करें कि आप हाइड्रेटेड हैं।",
+            }
+        };
+
+        // --- AI Knowledge Base ---
+        // Maps input commands to functions that return responses in the selected language.
+        const aiKnowledge = {
+            en: { // English responses
+                "hello": () => "Hello! How can I assist you today?",
+                "hi": () => "Hi there! What can I help you with?",
+                "how are you": () => "I'm just a computer program, but I'm here to help you. How about you?",
+                "how's it going": () => "Everything is running smoothly! What can I assist you with?",
+                "what is my current heart rate": () => `Your current heart rate is ${heartRate} beats per minute.`,
+                "what is my temperature": () => `Your current body temperature is ${temperature} degrees Fahrenheit.`,
+                "am i drowsy": () => isDrowsy ? uiText.en.alertReasonDrowsiness + ". Please consider a break." : "You appear to be alert.",
+                "what should i do if i feel tired": () => "If you feel tired, it's recommended to pull over to a safe location and take a break. Consider having a caffeinated drink or a short nap.",
+                "what are the signs of drowsiness": () => "Signs of drowsiness can include frequent blinking, heavy eyelids, difficulty focusing, and yawning.",
+                "how can i stay awake while driving": () => "To stay awake, try opening a window for fresh air, turning up the music, taking regular breaks, and ensuring you've had enough sleep before driving.",
+                "what is a normal heart rate": () => "A normal resting heart rate for adults is generally between 60 and 100 beats per minute. However, it can vary based on activity level and overall health.",
+                "what is a normal body temperature": () => "The average normal body temperature is around 98.6 degrees Fahrenheit (37 degrees Celsius), but it can vary slightly.",
+                "tell me a safety tip": () => "Here's a safety tip: Always ensure you are well-rested before driving, especially on long journeys.",
+                "what is the system status": () => `The current system status is: ${alertActive ? uiText.en.statusAlert + '. Please check the dashboard.' : uiText.en.statusNormal + '. Everything looks good.'}`,
+                "help": () => "I can provide information about your current health metrics, system status, and basic safety tips. Just ask!",
+                "thank you": () => "You're welcome! Drive safely.",
+                "thanks": () => "You're welcome! Have a safe trip.",
+                "simulate emergency": () => { triggerAlert("alertReasonSimulated"); return uiText.en.simulatingEmergency; },
+                "where am i": () => "You are currently in Indore, Madhya Pradesh, India.", // Location specific
+                "what time is it": () => {
+                    const now = new Date();
+                    const options = { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' };
+                    try {
+                        const timeString = now.toLocaleTimeString('en-IN', options); // Use English locale for India
+                        return `The current time is ${timeString} Indian Standard Time. It's Friday, April 18, 2025.`;
+                    } catch (e) { // Fallback
+                        return `Could not determine the current time.`;
+                    }
+                },
+                "what is the weather": () => "I am sorry, I cannot provide real-time weather information. Please check a weather app.",
+                "navigate to the nearest hospital": () => "I can't directly navigate, but the nearest hospital is Apollo Hospitals Indore, Rau Pithampur Road, Indore, Madhya Pradesh. You may use a navigation app.", // Location specific
+                "play some music": () => "I cannot play music directly. You may use a music app on your phone.",
+                "call for help": () => { triggerAlert("alertReasonCall"); return uiText.en.simulatingCall; }
+            },
+            hi: { // Hindi responses
+                "hello": () => "नमस्ते! मैं आपकी कैसे सहायता कर सकता हूँ?",
+                "hi": () => "नमस्ते! मैं आपकी किस चीज़ में मदद कर सकता हूँ?",
+                "how are you": () => "मैं बस एक कंप्यूटर प्रोग्राम हूँ, लेकिन मैं आपकी मदद करने के लिए यहाँ हूँ। आप कैसे हैं?",
+                "how's it going": () => "सब कुछ ठीक चल रहा है! मैं आपकी किस चीज़ में मदद कर सकता हूँ?",
+                "what is my current heart rate": () => `आपकी वर्तमान हृदय गति ${heartRate} बीट्स प्रति मिनट है।`,
+                "what is my temperature": () => `आपके शरीर का वर्तमान तापमान ${temperature} डिग्री फ़ारेनहाइट है।`,
+                "am i drowsy": () => isDrowsy ? uiText.hi.alertReasonDrowsiness + "। कृपया ब्रेक लेने पर विचार करें।" : "आप सतर्क दिखते हैं।",
+                "what should i do if i feel tired": () => "यदि आप थका हुआ महसूस करते हैं, तो सुरक्षित स्थान पर गाड़ी रोकने और ब्रेक लेने की सलाह दी जाती है। कैफीनयुक्त पेय या छोटी झपकी लेने पर विचार करें।",
+                "what are the signs of drowsiness": () => "उनींदापन के लक्षणों में बार-बार पलकें झपकाना, भारी पलकें, ध्यान केंद्रित करने में कठिनाई और जम्हाई लेना शामिल हो सकता है।",
+                "how can i stay awake while driving": () => "जागते रहने के लिए, ताज़ी हवा के लिए खिड़की खोलें, संगीत तेज़ करें, नियमित ब्रेक लें और सुनिश्चित करें कि गाड़ी चलाने से पहले आपने पर्याप्त नींद ली है।",
+                "what is a normal heart rate": () => "वयस्कों के लिए सामान्य आराम की हृदय गति आमतौर पर 60 और 100 बीट्स प्रति मिनट के बीच होती है। हालाँकि, यह गतिविधि स्तर और समग्र स्वास्थ्य के आधार पर भिन्न हो सकती है।",
+                "what is a normal body temperature": () => "औसत सामान्य शरीर का तापमान लगभग 98.6 डिग्री फ़ारेनहाइट (37 डिग्री सेल्सियस) होता है, लेकिन यह थोड़ा भिन्न हो सकता है।",
+                "tell me a safety tip": () => "यहाँ एक सुरक्षा युक्ति है: हमेशा सुनिश्चित करें कि आप गाड़ी चलाने से पहले अच्छी तरह से आराम कर चुके हैं, खासकर लंबी यात्राओं पर।",
+                "what is the system status": () => `वर्तमान सिस्टम स्थिति है: ${alertActive ? uiText.hi.statusAlert + '। कृपया डैशबोर्ड जांचें।' : uiText.hi.statusNormal + '। सब कुछ ठीक लग रहा है।'}`,
+                "help": () => "मैं आपकी वर्तमान स्वास्थ्य मैट्रिक्स, सिस्टम स्थिति और बुनियादी सुरक्षा युक्तियों के बारे में जानकारी प्रदान कर सकता हूँ। बस पूछें!",
+                "thank you": () => "आपका स्वागत है! सुरक्षित ड्राइव करें।",
+                "thanks": () => "आपका स्वागत है! आपकी यात्रा सुरक्षित हो।",
+                "simulate emergency": () => { triggerAlert("alertReasonSimulated"); return uiText.hi.simulatingEmergency; },
+                "where am i": () => "आप वर्तमान में इंदौर, मध्य प्रदेश, भारत में हैं।",
+                "what time is it": () => {
+                    const now = new Date();
+                    const options = { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' };
+                    try {
+                        const timeString = now.toLocaleTimeString('hi-IN', options);
+                        return `वर्तमान समय ${timeString} भारतीय मानक समय है। आज शुक्रवार, 18 अप्रैल, 2025 है।`;
+                    } catch (e) { // Fallback if locale is not supported
+                        const timeString = now.toLocaleTimeString('en-IN', options);
+                        return `वर्तमान समय ${timeString} भारतीय मानक समय है। आज शुक्रवार, 18 अप्रैल, 2025 है।`;
+                    }
+                },
+                "what is the weather": () => "मुझे क्षमा करें, मैं वास्तविक समय मौसम की जानकारी प्रदान नहीं कर सकता। कृपया मौसम ऐप देखें।",
+                "navigate to the nearest hospital": () => "मैं सीधे नेविगेट नहीं कर सकता, लेकिन निकटतम अस्पताल अपोलो हॉस्पिटल्स इंदौर, राउ पीथमपुर रोड, इंदौर, मध्य प्रदेश है। आप नेविगेशन ऐप का उपयोग कर सकते हैं।",
+                "play some music": () => "मैं सीधे संगीत नहीं चला सकता। आप अपने फ़ोन पर संगीत ऐप का उपयोग कर सकते हैं।",
+                "call for help": () => { triggerAlert("alertReasonCall"); return uiText.hi.simulatingCall; }
+            }
+        };
+
+        // --- Core Functions ---
+        function speak(text) {
+            try {
+                speechSynthesis.cancel(); // Stop any previous speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = selectedLanguage === 'hi' ? 'hi-IN' : 'en-US'; // Set language code
+                speechSynthesis.speak(utterance);
+            } catch (error) {
+                console.error("Speech synthesis error:", error);
+            }
+        }
+
+        function updateUI(lang) {
+            const texts = uiText[lang];
+            if (!texts) {
+                console.error("Invalid language selected for UI update:", lang);
+                return;
+            }
+            try {
+                document.title = texts.mainTitle;
+                if (mainTitle) mainTitle.textContent = texts.mainTitle;
+                if (monitoringTitle) monitoringTitle.textContent = texts.monitoringTitle;
+                if (heartRateLabel) heartRateLabel.textContent = texts.heartRateLabel;
+                if (temperatureLabel) temperatureLabel.textContent = texts.temperatureLabel;
+                if (statusLabel) statusLabel.textContent = texts.statusLabel;
+                if (statusText) statusText.textContent = alertActive ? texts.statusAlert : texts.statusNormal;
+                if (simulateBtn) simulateBtn.textContent = texts.simulateButton;
+                if (alertPopupTitle) alertPopupTitle.textContent = texts.alertPopupTitle;
+                if (alertPopupHeader) alertPopupHeader.textContent = texts.alertPopupHeader;
+                if (alertBodyTitle) alertBodyTitle.textContent = texts.alertBodyTitle;
+                if (alertHeartRateLabel) alertHeartRateLabel.textContent = texts.alertHeartRateLabel;
+                if (alertTemperatureLabel) alertTemperatureLabel.textContent = texts.alertTemperatureLabel;
+                if (detailsBtn) detailsBtn.textContent = texts.alertDetailsButton;
+                if (cancelBtn) cancelBtn.textContent = texts.alertCancelButton;
+                if (aiAssistantTitle) aiAssistantTitle.textContent = texts.aiAssistantTitle;
+                if (aiInput) aiInput.placeholder = texts.aiPlaceholder;
+                if (aiSendBtn) aiSendBtn.textContent = texts.aiSendButton;
+                if (drowsinessWarning) drowsinessWarning.textContent = texts.drowsinessWarning;
+                if (aiResponseDiv && (aiResponseDiv.textContent === uiText.en.initializingAI || aiResponseDiv.textContent === uiText.hi.initializingAI || aiResponseDiv.textContent === uiText.en.askAnything || aiResponseDiv.textContent === uiText.hi.askAnything)) {
+                    aiResponseDiv.textContent = texts.askAnything;
+                }
+                if (statusContainer) statusContainer.style.color = alertActive ? "#FF4136" : "lime"; // Brighter red/green
+            } catch (error) {
+                console.error("Error updating UI elements:", error);
+            }
+        }
+
+        function handleAIQuery() {
+            if (!aiInput || !aiSendBtn || !aiResponseDiv) return;
+
+            const userQuery = aiInput.value.trim().toLowerCase();
+            if (userQuery) {
+                const currentKnowledge = aiKnowledge[selectedLanguage];
+                const texts = uiText[selectedLanguage];
+
+                const processingText = texts.processing(aiInput.value.trim());
+                aiResponseDiv.textContent = processingText;
+                speak(processingText);
+                aiInput.disabled = true;
+                aiSendBtn.disabled = true;
+
+                setTimeout(() => {
+                    let response = currentKnowledge[userQuery];
+                    if (typeof response === 'function') {
+                        response = response();
+                    } else if (!response) {
+                        response = texts.fallbackResponse;
+                    }
+                    aiResponseDiv.textContent = response;
+                    speak(response);
+                    aiInput.value = ""; // Clear input field
+                    aiInput.disabled = false; // Re-enable input
+                    aiSendBtn.disabled = false;
+                }, 1500);
+            }
+        }
+
+        async function startCamera() {
+            if (!cameraFeed) return;
+
+            try {
+                console.log("Attempting to access camera...");
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+                });
+                cameraFeed.srcObject = stream;
+                console.log("Camera stream acquired.");
+                if (faceApiModelLoaded) {
+                    setupDrowsinessDetection();
+                } else {
+                    console.warn("Face models not loaded, using simulated drowsiness detection.");
+                    setupSimulatedDrowsiness();
+                }
+
+            } catch (err) {
+                console.error("Camera access error:", err);
+                const errorText = uiText[selectedLanguage].cameraError;
+                if (typeof alert !== 'undefined') alert(errorText);
+                speak(errorText);
+                cameraFeed.style.display = 'none'; // Hide feed element on error
+                if(drowsinessWarning) drowsinessWarning.style.display = 'none';
+                console.warn("Starting simulated drowsiness detection due to camera error.");
+                setupSimulatedDrowsiness();
+            }
+        }
+
+        async function loadFaceApiModels() {
+            try {
+                if (typeof faceapi !== 'undefined') {
+                    console.log("Loading face-api models...");
+                    await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+                    console.log("Face-api models loaded successfully.");
+                    faceApiModelLoaded = true;
+                } else {
+                    console.warn("face-api.js script not loaded or available.");
+                    faceApiModelLoaded = false;
+                    speak(uiText[selectedLanguage].faceApiError);
+                }
+            } catch (error) {
+                console.error("Error loading face-api models:", error);
+                faceApiModelLoaded = false;
+                speak(uiText[selectedLanguage].faceApiError);
+            }
+        }
+
+        function setupDrowsinessDetection() {
+            if (!faceApiModelLoaded || !cameraFeed) {
+                console.log("Skipping real drowsiness detection setup (models not loaded or camera feed missing).");
+                return;
+            }
+
+            cameraFeed.addEventListener('play', () => {
+                console.log("Camera playing, starting face detection interval.");
+                const detectionInterval = setInterval(async () => {
+                    if (cameraFeed.paused || cameraFeed.ended || alertActive) {
+                        return;
+                    }
+
+                    try {
+                        const detections = await faceapi.detectAllFaces(cameraFeed, new faceapi.TinyFaceDetectorOptions());
+
+                        if (detections.length > 0 && Math.random() < 0.08) { // Adjust probability (8%)
+                            console.log("Simulated drowsiness triggered (face detected).");
+                            isDrowsy = true;
+                            if(drowsinessWarning) drowsinessWarning.style.display = 'block';
+                            triggerAlert("alertReasonDrowsiness");
+                        }
+
+                    } catch(detectError) {
+                        console.error("Error during face detection:", detectError);
+                    }
+                }, 3000); // Check every 3 seconds
+            });
+        }
+
+        function setupSimulatedDrowsiness() {
+            console.log("Setting up purely simulated drowsiness detection.");
+            setInterval(() => {
+                if (!alertActive && Math.random() < 0.02) { // Low probability (2%)
+                    console.log("Simulated drowsiness triggered (random).");
+                    isDrowsy = true;
+                    if(drowsinessWarning) drowsinessWarning.style.display = 'block';
+                    triggerAlert("alertReasonDrowsiness");
+                }
+            }, 6000); // Check less often (every 6 seconds)
+        }
+
+        function updateHealthData() {
+            if (!alertActive) {
+                heartRate = Math.floor(68 + Math.random() * 14); // Range: 68-82
+                temperature = 98.2 + Math.random() * 0.8;       // Range: 98.2-99.0
+                temperature = Math.round(temperature * 10) / 10; // Round to one decimal place
+
+                if (heartRateDisplay) heartRateDisplay.textContent = heartRate;
+                if (temperatureDisplay) temperatureDisplay.textContent = temperature;
+
+                if (Math.random() < 0.01) {
+                    console.log("Simulated health anomaly triggered.");
+                    triggerAlert("alertReasonAnomaly");
+                }
+            }
+
+            if (statusText && statusText.textContent !== uiText[selectedLanguage]?.statusInitializing) {
+                 statusText.textContent = alertActive ? uiText[selectedLanguage]?.statusAlert : uiText[selectedLanguage]?.statusNormal;
+                 if(statusContainer) statusContainer.style.color = alertActive ? "#FF4136" : "lime"; // Brighter red/green
+            }
+
+             setTimeout(updateHealthData, 3500); // Update every 3.5 seconds
+        }
+
+        function triggerAlert(reasonKey) {
+            if (alertActive) return;
+
+            alertActive = true;
+            isDrowsy = (reasonKey === "alertReasonDrowsiness");
+
+            const texts = uiText[selectedLanguage];
+            const reasonText = texts[reasonKey] || texts.alertBaseReason;
+
+            if (alertHeartRateDisplay) alertHeartRateDisplay.textContent = heartRate;
+            if (alertTemperatureDisplay) alertTemperatureDisplay.textContent = temperature;
+            if (alertMessage) alertMessage.textContent = reasonText;
+
+            if (statusText) statusText.textContent = texts.statusAlert;
+            if (statusContainer) statusContainer.style.color = "#FF4136"; // Brighter Red
+
+            if (alertPopup) alertPopup.style.display = "flex";
+
+            if (drowsinessWarning) drowsinessWarning.style.display = isDrowsy ? 'block' : 'none';
+
+            speak(`${texts.alertPopupHeader}! ${reasonText}`);
+
+            let flashCount = 0;
+            const originalTitle = document.title;
+            const alertTitle = `⚠️ ${texts.alertPopupHeader}!`;
+            if (window.flashIntervalId) clearInterval(window.flashIntervalId);
+            window.flashIntervalId = setInterval(() => {
+                document.title = flashCount % 2 === 0 ? alertTitle : originalTitle;
+                flashCount++;
+                if (!alertActive || flashCount >= 10) {
+                    clearInterval(window.flashIntervalId);
+                    window.flashIntervalId = null;
+                    document.title = originalTitle;
+                }
+            }, 600); // Flash speed
+        }
+
+        function cancelAlert() {
+            alertActive = false;
+            isDrowsy = false;
+
+            if (alertPopup) alertPopup.style.display = "none";
+            if (drowsinessWarning) drowsinessWarning.style.display = 'none';
+
+            const texts = uiText[selectedLanguage];
+            if (statusText) statusText.textContent = texts.statusNormal;
+            if (statusContainer) statusContainer.style.color = "lime"; // Brighter Green
+
+            speak(texts.alertCancelled);
+
+            if (window.flashIntervalId) clearInterval(window.flashIntervalId);
+            window.flashIntervalId = null;
+            if(texts) document.title = texts.mainTitle;
+        }
+
+        function showDetails() {
+             const texts = uiText[selectedLanguage];
+             const detailsText = `${texts.showDetailsTitle}:\n\n` +
+                                `${texts.heartRateLabel}: ${heartRate} bpm\n` +
+                                `${texts.temperatureLabel}: ${temperature} °F\n\n` +
+                                `${texts.showDetailsIssues}\n` +
+                                `- ${isDrowsy ? texts.showDetailsDrowsy : texts.showDetailsVitals}\n\n` +
+                                `${texts.showDetailsActions}\n` +
+                                `- ${texts.showDetailsActionBreak}\n` +
+                                `- ${texts.showDetailsActionHydrate}\n` +
+                                `- ${texts.showDetailsActionPullover}\n\n` +
+                                `${texts.showDetailsHumanComm}\n` +
+                                `- ${texts.showDetailsCommEn}\n` +
+                                `- ${texts.showDetailsCommHi}`;
+
+            if(typeof alert !== 'undefined') alert(detailsText);
+            speak(detailsText.replace(/\n/g, ". "));
+
+            // Uncomment this line to automatically cancel the alert after showing details
+            // cancelAlert();
+        }
+
+        function startApplication() {
+            console.log(`Starting application in language: ${selectedLanguage}`);
+
+            updateUI(selectedLanguage);
+
+            if (languageSelectorOverlay) {
+                languageSelectorOverlay.classList.add('hidden');
+            }
+            if (mainDashboard) mainDashboard.style.display = 'block';
+
+            if (aiSendBtn) aiSendBtn.addEventListener('click', handleAIQuery);
+            if (aiInput) aiInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') handleAIQuery();
+            });
+            if (simulateBtn) simulateBtn.addEventListener('click', () => {
+                if (aiInput) aiInput.value = "simulate emergency"; // Use the English command key
+                handleAIQuery();
+            });
+            if (detailsBtn) detailsBtn.addEventListener('click', showDetails);
+            if (cancelBtn) cancelBtn.addEventListener('click', cancelAlert);
+
+            loadFaceApiModels().then(() => {
+                startCamera();
+                updateHealthData();
+
+                setTimeout(() => {
+                    if (statusText) statusText.textContent = uiText[selectedLanguage].statusNormal;
+                    if (statusContainer) statusContainer.style.color = "lime";
+                    if (aiResponseDiv) aiResponseDiv.textContent = uiText[selectedLanguage].askAnything;
+                    speak(uiText[selectedLanguage].initialGreeting);
+                }, 1500);
+            });
+        }
+
+        function assignDashboardDOMElements() {
+             try {
+                 heartRateDisplay = document.getElementById('heartRate');
+                 temperatureDisplay = document.getElementById('temperature');
+                 alertHeartRateDisplay = document.getElementById('alertHeartRate');
+                 alertTemperatureDisplay = document.getElementById('alertTemperature');
+                 alertMessage = document.getElementById('alertMessage');
+                 statusContainer = document.getElementById('statusContainer');
+                 statusLabel = document.getElementById('statusLabel');
+                 statusText = document.getElementById('statusText');
+                 simulateBtn = document.getElementById('simulateBtn');
+                 alertPopup = document.getElementById('alertPopup');
+                 detailsBtn = document.getElementById('detailsBtn');
+                 cancelBtn = document.getElementById('cancelBtn');
+                 cameraFeed = document.getElementById('cameraFeed');
+                 drowsinessWarning = document.getElementById('drowsinessWarning');
+                 aiResponseDiv = document.getElementById('aiResponse');
+                 aiInput = document.getElementById('aiInput');
+                 aiSendBtn = document.getElementById('aiSendBtn');
+                 mainTitle = document.getElementById('mainTitle');
+                 monitoringTitle = document.getElementById('monitoringTitle');
+                 heartRateLabel = document.getElementById('heartRateLabel');
+                 temperatureLabel = document.getElementById('temperatureLabel');
+                 alertPopupTitle = document.getElementById('alertPopupTitle');
+                 alertPopupHeader = document.getElementById('alertPopupHeader');
+                 alertBodyTitle = document.getElementById('alertBodyTitle');
+                 alertHeartRateLabel = document.getElementById('alertHeartRateLabel');
+                 alertTemperatureLabel = document.getElementById('alertTemperatureLabel');
+                 aiAssistantTitle = document.getElementById('aiAssistantTitle');
+             } catch (error) {
+                 console.error("Error assigning dashboard DOM elements:", error);
+                 document.body.innerHTML = "<p style='color: red; text-align: center; margin-top: 50px;'>Error: Failed to initialize UI components. Please refresh.</p>";
+             }
+        }
+
+        function setupLanguageSelection() {
+            languageSelectorOverlay = document.getElementById('languageSelectorOverlay');
+            selectEnglishBtn = document.getElementById('selectEnglishBtn');
+            selectHindiBtn = document.getElementById('selectHindiBtn');
+            mainDashboard = document.getElementById('mainDashboard');
+
+            assignDashboardDOMElements();
+
+            if (!languageSelectorOverlay || !selectEnglishBtn || !selectHindiBtn || !mainDashboard) {
+                console.error("Essential language selection or dashboard elements not found!");
+                document.body.innerHTML = "<p style='color: red; text-align: center; margin-top: 50px;'>Error: UI failed to load correctly. Please refresh the page.</p>";
+                return;
+            }
+
+            selectEnglishBtn.addEventListener('click', () => {
+                selectedLanguage = 'en';
+                startApplication();
+            });
+
+            selectHindiBtn.addEventListener('click', () => {
+                selectedLanguage = 'hi';
+                startApplication();
+            });
+
+            languageSelectorOverlay.style.display = 'flex';
+            mainDashboard.style.display = 'none';
+            console.log("Language selection UI setup complete.");
+        }
+
+        // --- Run Setup on Window Load ---
+        window.onload = () => {
+            console.log("Window loaded. Setting up language selection.");
+            setupLanguageSelection();
+        };
+    </script>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+</body>
+</html>
